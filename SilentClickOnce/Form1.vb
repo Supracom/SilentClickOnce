@@ -1,9 +1,8 @@
 Imports System.Deployment.Application
-Imports System.Runtime.InteropServices
 Imports Microsoft.Win32
 
 Public Class Form1
-    Dim WithEvents iphm As InPlaceHostingManager = Nothing
+    Private WithEvents iphm As InPlaceHostingManager = Nothing
 
     Public Sub InstallApplication(ByVal deployManifestUriStr As String)
 
@@ -11,15 +10,15 @@ Public Class Form1
             ' Try installing the application
             Dim deploymentUri As New Uri(deployManifestUriStr)
             iphm = New InPlaceHostingManager(deploymentUri, False)
-            Console.WriteLine("[?] Starting setup.")
+            WriteLog("[?] Starting setup.")
         Catch uriEx As UriFormatException
-            Console.WriteLine("[-] Unable to install, invalid URL. Error: " + uriEx.Message)
+            WriteLog($"[-] Unable to install, invalid URL: {uriEx.Message}")
             Environment.Exit(0)
         Catch platformEx As PlatformNotSupportedException
-            Console.WriteLine("[-] Unable to install, unsupported platform. Error: " + platformEx.Message)
+            WriteLog($"[-] Unable to install, unsupported platform: {platformEx.Message}")
             Environment.Exit(0)
         Catch argumentEx As ArgumentException
-            Console.WriteLine("[-] Unable to install, invalid argument. Error: " + argumentEx.Message)
+            WriteLog($"[-] Unable to install, invalid argument: {argumentEx.Message}")
             Environment.Exit(0)
         End Try
 
@@ -31,7 +30,7 @@ Public Class Form1
     Private Sub iphm_GetManifestCompleted(ByVal sender As Object, ByVal e As GetManifestCompletedEventArgs) Handles iphm.GetManifestCompleted
         ' Check for errors downloading the manifest.
         If (e.Error IsNot Nothing) Then
-            Console.WriteLine("[-] Error verifying manifest. Error: " + e.Error.Message)
+            WriteLog($"[-] Error verifying manifest: {e.Error.Message}")
             Environment.Exit(0)
         End If
 
@@ -39,7 +38,7 @@ Public Class Form1
         Try
             iphm.AssertApplicationRequirements(True)
         Catch ex As Exception
-            Console.WriteLine("[-] Error verifying requirements. Error: " + ex.Message)
+            WriteLog($"[-] Error verifying requirements: {ex.Message}")
             Environment.Exit(0)
         End Try
 
@@ -47,7 +46,7 @@ Public Class Form1
         Try
             iphm.DownloadApplicationAsync()
         Catch downloadEx As Exception
-            Console.WriteLine("[-] Error downloading. Error: " + downloadEx.Message)
+            WriteLog($"[-] Error downloading: {downloadEx.Message}")
             Environment.Exit(0)
         End Try
     End Sub
@@ -56,12 +55,12 @@ Public Class Form1
 
         ' Check for errors downloading the application
         If (e.Error IsNot Nothing) Then
-            Console.WriteLine("[-] Error installing: " & e.Error.Message)
+            WriteLog($"[-] Error installing: {e.Error.Message}")
             Environment.Exit(0)
         End If
 
         ' Application installed
-        Console.WriteLine("[+] Installation completed.")
+        WriteLog("[+] Installation completed.")
         Environment.Exit(0)
     End Sub
 
@@ -76,13 +75,13 @@ Public Class Form1
             Try
                 info = ad.CheckForDetailedUpdate()
             Catch dde As DeploymentDownloadException
-                Console.WriteLine("[-] Cannot download application. " + dde.Message)
+                WriteLog($"[-] Cannot download application: {dde.Message}")
                 Return
             Catch ide As InvalidDeploymentException
-                Console.WriteLine("[-] Cannot check for new version, corrupted ClickOnce? " + ide.Message)
+                WriteLog($"[-] Cannot check for new version, corrupted ClickOnce? {ide.Message}")
                 Return
             Catch ioe As InvalidOperationException
-                Console.WriteLine("[-] Cannot update, not a ClickOnce?. " + ioe.Message)
+                WriteLog($"[-] Cannot update, not a ClickOnce? {ioe.Message}")
                 Return
             End Try
 
@@ -93,7 +92,7 @@ Public Class Form1
                     MessageBox.Show("[+] Application updated, restarting")
                     Application.Restart()
                 Catch dde As DeploymentDownloadException
-                    Console.WriteLine("[-] Cannot update: " + dde.Message)
+                    WriteLog($"[-] Cannot update: {dde.Message}")
                     Return
                 End Try
             End If
@@ -130,12 +129,12 @@ Public Class Form1
             Dim subscriptionStore As Object = subState.GetType().GetProperty("SubscriptionStore").GetValue(subState)
             subscriptionStore.GetType().GetMethod("UninstallSubscription").Invoke(subscriptionStore, New Object() {subState})
 
-            Console.WriteLine("[+] Succesfully uninstalled")
+            WriteLog("[+] Succesfully uninstalled")
 
             Environment.Exit(0)
 
         Catch ex As Exception
-            Console.WriteLine($"[-] Error uninstalling {ex.Message}")
+            WriteLog($"[-] Error uninstalling: {ex.Message}")
             Environment.Exit(1)
         End Try
     End Sub
@@ -176,7 +175,7 @@ Public Class Form1
 
         Dim arguments() As String = Environment.GetCommandLineArgs()
         If (arguments.Count <= 1) Then
-            Console.WriteLine("[-] Missing argument (-i .application url OR -u application name)")
+            WriteLog("[-] Missing argument (-i .application url OR -u application name)")
             Environment.Exit(0)
         Else
             If arguments(1).Equals("-i") Then
@@ -185,9 +184,13 @@ Public Class Form1
             ElseIf arguments(1).Equals("-u") Then
                 Uninstall(arguments(2))
             Else
-                Console.WriteLine("[-] Unknown arguments passed")
+                WriteLog("[-] Unknown arguments passed")
             End If
         End If
+    End Sub
+
+    Private Sub WriteLog(ByVal logText As String)
+        Console.WriteLine($"[{Date.Now.Year.ToString("D2")}-{Date.Now.Month.ToString("D2")}-{Date.Now.Day.ToString("D2")} {Date.Now.Hour.ToString("D2")}:{Date.Now.Minute.ToString("D2")}:{Date.Now.Second.ToString("D2")}] {logText}")
     End Sub
 
 End Class
