@@ -1,5 +1,7 @@
 Imports System.Deployment.Application
 Imports Microsoft.Win32
+Imports System.Text.RegularExpressions
+Imports System.Reflection
 
 Public Class Form1
     Private WithEvents iphm As InPlaceHostingManager = Nothing
@@ -112,17 +114,27 @@ Public Class Form1
             Dim uninstallString As String = GetUninstallCommand(applicationName)
             Dim fullApplicationName As String = ""
 
+            If IsNothing(uninstallString) Then
+                WriteLog($"[-] Application '{applicationName}' not found in registry")
+                Environment.Exit(1)
+            End If
+
             If uninstallString.Contains($"{applicationName}.application") Then
                 fullApplicationName = $"{applicationName}.application"
             Else
                 fullApplicationName = $"{applicationName}.app"
             End If
 
-            Dim publicKeyToken As String = uninstallString.Replace($"rundll32.exe dfshim.dll,ShArpMaintain {fullApplicationName}, Culture=neutral, PublicKeyToken=", "")
-            publicKeyToken = publicKeyToken.Substring(0, publicKeyToken.IndexOf(","))
-            Dim processorArchitecture As String = uninstallString.Replace($"rundll32.exe dfshim.dll,ShArpMaintain {fullApplicationName}, Culture=neutral, PublicKeyToken={publicKeyToken}, processorArchitecture=", "")
+            Dim extractedInfo As String() = ExtractInfo(uninstallString)
 
-            Dim textualSubId As String = $"{fullApplicationName}, Culture=neutral, PublicKeyToken={publicKeyToken}, processorArchitecture={processorArchitecture}"
+            WriteLog($"[?] PublicKeyToken: {extractedInfo(0)}, Culture: {extractedInfo(1)}, processorArchitecture: {extractedInfo(2)}")
+            If IsNothing(extractedInfo(0)) Or IsNothing(extractedInfo(1)) Or IsNothing(extractedInfo(2)) Then
+                WriteLog("[-] Some data is missing from uninstall string ")
+                Environment.Exit(1)
+            End If
+
+
+            Dim textualSubId As String = $"{fullApplicationName}, Culture={extractedInfo(1)}, PublicKeyToken={extractedInfo(0)}, processorArchitecture={extractedInfo(2)}"
             Dim deploymentServiceCom As New System.Deployment.Application.DeploymentServiceCom()
             Dim _r_m_GetSubscriptionState As Reflection.MethodInfo = GetType(System.Deployment.Application.DeploymentServiceCom).GetMethod("GetSubscriptionState", System.Reflection.BindingFlags.NonPublic Or System.Reflection.BindingFlags.Instance)
             Dim subState As Object = _r_m_GetSubscriptionState.Invoke(deploymentServiceCom, New Object() {textualSubId})
@@ -134,7 +146,7 @@ Public Class Form1
             Environment.Exit(0)
 
         Catch ex As Exception
-            WriteLog($"[-] Error uninstalling: {ex.Message}")
+            WriteLog($"[-] Error uninstalling: {ex.Message}{Environment.NewLine}{Environment.NewLine}{ex.StackTrace}")
             Environment.Exit(1)
         End Try
     End Sub
@@ -192,5 +204,28 @@ Public Class Form1
     Private Sub WriteLog(ByVal logText As String)
         Console.WriteLine($"[{Date.Now.Year.ToString("D2")}-{Date.Now.Month.ToString("D2")}-{Date.Now.Day.ToString("D2")} {Date.Now.Hour.ToString("D2")}:{Date.Now.Minute.ToString("D2")}:{Date.Now.Second.ToString("D2")}] {logText}")
     End Sub
+
+    Private Function ExtractInfo(ByVal uninstallString As String)
+
+        Dim info() As String = {Nothing, Nothing, Nothing}
+
+        Dim groups As GroupCollection = Regex.Match(uninstallString, "PublicKeyToken=(\w+)", RegexOptions.IgnoreCase).Groups
+        If groups.Count > 0 Then
+            info(0) = groups(1).Value
+        End If
+
+        groups = Regex.Match(uninstallString, "Culture=(\w+)", RegexOptions.IgnoreCase).Groups
+        If groups.Count > 0 Then
+            info(1) = groups(1).Value
+        End If
+
+        groups = Regex.Match(uninstallString, "ProcessorArchitecture=(\w+)", RegexOptions.IgnoreCase).Groups
+        If groups.Count > 0 Then
+            info(2) = groups(1).Value
+        End If
+
+        Return info
+
+    End Function
 
 End Class
