@@ -146,7 +146,7 @@ Public Class Form1
             Environment.Exit(0)
 
         Catch ex As Exception
-            WriteLog($"[-] Error uninstalling: {ex.Message}{Environment.NewLine}{Environment.NewLine}{ex.StackTrace}")
+            WriteLog($"[-] Error uninstalling: {ex.InnerException}{Environment.NewLine}{Environment.NewLine}---------{ex.Message}{Environment.NewLine}{Environment.NewLine}---------{ex.StackTrace}")
             Environment.Exit(1)
         End Try
     End Sub
