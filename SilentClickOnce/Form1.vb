@@ -102,7 +102,7 @@ Public Class Form1
 
     End Sub
 
-    Private Sub Uninstall(ByVal applicationName As String)
+Private Sub Uninstall(ByVal applicationName As String)
 
         ' Kill process if open
         Try
@@ -128,13 +128,21 @@ Public Class Form1
             Dim extractedInfo As String() = ExtractInfo(uninstallString)
 
             WriteLog($"[?] PublicKeyToken: {extractedInfo(0)}, Culture: {extractedInfo(1)}, processorArchitecture: {extractedInfo(2)}")
+            WriteLog($"[?] Uninstall string: {uninstallString}")
             If IsNothing(extractedInfo(0)) Or IsNothing(extractedInfo(1)) Or IsNothing(extractedInfo(2)) Then
                 WriteLog("[-] Some data is missing from uninstall string ")
                 Environment.Exit(1)
             End If
 
+            Dim textualSubId As String
+            If uninstallString.Contains("rundll32.exe dfshim.dll,ShArpMaintain ") Then
+                textualSubId = uninstallString.Replace("rundll32.exe dfshim.dll,ShArpMaintain ", "")
+                WriteLog("[?] Using new method")
+            Else
+                textualSubId = $"{fullApplicationName}, Culture={extractedInfo(1)}, PublicKeyToken={extractedInfo(0)}, processorArchitecture={extractedInfo(2)}"
+                WriteLog("[?] Using old method")
+            End If
 
-            Dim textualSubId As String = $"{fullApplicationName}, Culture={extractedInfo(1)}, PublicKeyToken={extractedInfo(0)}, processorArchitecture={extractedInfo(2)}"
             Dim deploymentServiceCom As New System.Deployment.Application.DeploymentServiceCom()
             Dim _r_m_GetSubscriptionState As Reflection.MethodInfo = GetType(System.Deployment.Application.DeploymentServiceCom).GetMethod("GetSubscriptionState", System.Reflection.BindingFlags.NonPublic Or System.Reflection.BindingFlags.Instance)
             Dim subState As Object = _r_m_GetSubscriptionState.Invoke(deploymentServiceCom, New Object() {textualSubId})
