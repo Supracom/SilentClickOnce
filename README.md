@@ -15,10 +15,6 @@ Uninstall example: **SilentClickOnce.exe -u MyApp > MyApp.log**
 
 Don't want to compile or can't? Download the release [here on GitHub](https://github.com/PaaaulZ/SilentClickOnce/releases/) and download the ready to use file.
 
-## Support
-
-[!["Buy Me A Beer"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/paaaulz)
-
 ## Why is this special?
 
 This is nothing special. I made this for me to use and made it public because people around the internet keep saying that you can't silently install a ClickOnce. Someone even said that only malware installs silently completely forgetting that maybe you want to push an internal use application to every client in your company domain.
